@@ -1,15 +1,13 @@
 // ===============================
-// 自我评估系统主脚本 app.js
+// 自我评估系统 主脚本 app.js
 // ===============================
 
-// -----------------------
-// 一些基础配置
-// -----------------------
-const MONITOR_INTERVAL_MS = 10 * 1000; // 每小时提醒，可改短测试
+// 监控间隔（1 小时）
+const MONITOR_INTERVAL_MS = 60 * 60 * 1000;
 let monitorTimer = null;
 
 // -----------------------
-// 页面加载初始化
+// 初始化
 // -----------------------
 window.onload = function () {
     loadHistory();
@@ -22,7 +20,7 @@ window.onload = function () {
 };
 
 // -----------------------
-// 通知权限请求
+// 请求通知权限
 // -----------------------
 function requestNotificationPermission() {
     if ("Notification" in window) {
@@ -31,7 +29,15 @@ function requestNotificationPermission() {
 }
 
 // -----------------------
-// 通知 + 震动提醒
+// 播放叮声
+// -----------------------
+function playDing() {
+    const audio = new Audio("audio/ding.wav");
+    audio.play();
+}
+
+// -----------------------
+// 通知 + 音效提醒
 // -----------------------
 function notifyUser(message) {
 
@@ -42,19 +48,13 @@ function notifyUser(message) {
             icon: "icons/icon-192.png"
         });
 
-        // 震动
-        if (navigator.vibrate) {
-            navigator.vibrate([200, 100, 200]); // 双震动
-        }
+        playDing(); // 播放提示音
         return;
     }
 
     // alert 作为兜底
     alert(message);
-
-    if (navigator.vibrate) {
-        navigator.vibrate([200, 100, 200]);
-    }
+    playDing();
 }
 
 // -----------------------
@@ -80,7 +80,6 @@ function saveRecord() {
         valuable
     };
 
-    // 存储到 localStorage
     let history = JSON.parse(localStorage.getItem("evalHistory") || "[]");
     history.push(record);
     localStorage.setItem("evalHistory", JSON.stringify(history));
@@ -98,11 +97,9 @@ function loadHistory() {
 
     let history = JSON.parse(localStorage.getItem("evalHistory") || "[]");
 
-    // 倒序显示
     history.reverse().forEach(record => {
         const row = document.createElement("tr");
 
-        // 情绪颜色
         const color = moodColor(record.mood);
 
         row.innerHTML = `
@@ -131,13 +128,13 @@ function moodColor(mood) {
 }
 
 // -----------------------
-// 情绪中文名
+// 情绪中文翻译
 // -----------------------
 function translateMood(mood) {
     switch (mood) {
         case "focus": return "专注";
         case "calm": return "平静";
-        case "anvious": return "焦虑";
+        case "anxious": return "焦虑";
         case "stress": return "压力";
         case "out_of_control": return "失控";
     }
@@ -156,37 +153,35 @@ function generateFeedback() {
 
     const last = history[history.length - 1];
     let mood = last.mood;
-    let doing = last.doing;
     let valuable = last.valuable;
 
     let feedback = "【系统反馈】\n";
 
     switch (mood) {
         case "focus":
-            feedback += "你现在状态不错，保持住这个势头，不要松劲。\n";
+            feedback += "你现在状态不错，保持住这个势头，不要松懈。\n";
             break;
 
         case "calm":
-            feedback += "你的状态稳定，但要小心进入低效舒适区。保持一点紧迫感。\n";
+            feedback += "你现在很平静，但不要陷入舒适区。保持一点推进力。\n";
             break;
 
         case "anxious":
-            feedback += "你现在明显焦虑。深呼吸十秒，喝点水，稍微走动一下。别让情绪压着你。\n";
+            feedback += "你现在焦虑得有点明显。深呼吸十秒，喝点水，站起来走两步。\n";
             break;
 
         case "stress":
-            feedback += "你现在压力过大，状态已经影响效率。去散步 5 分钟，或者闭上眼睛缓一缓。\n";
+            feedback += "你的压力已经影响到状态了。离开屏幕几分钟，做点放松动作。\n";
             break;
 
         case "out_of_control":
-            feedback += "⚠ 你现在处于【失控】状态。\n";
-            feedback += "停下你正在做的事情，马上洗把脸，听几分钟轻音乐，让自己冷静下来。\n你现在的方向完全偏了，必须立即调整。\n";
+            feedback += "⚠ 你处于【失控】状态。\n";
+            feedback += "立刻停下来，去洗把脸、听轻音乐，强制冷静 3 分钟。\n";
             break;
     }
 
     if (valuable === "不是" || valuable === "否" || valuable === "不算" || valuable === "一般") {
-        feedback += "\n顺便提醒你：你现在做的事情并不是最有价值的。\n";
-        feedback += "你必须立刻问自己：我现在应该做的最重要的事是什么？然后马上去做。\n";
+        feedback += "\n你现在做的事情不是最有价值的。\n马上提醒自己：我现在应该做的最重要的事是什么？然后去做。\n";
     }
 
     document.getElementById("feedbackText").innerText = feedback;
@@ -202,7 +197,7 @@ function startMonitoring() {
     }
 
     monitorTimer = setInterval(() => {
-        notifyUser("时间到了，该记录你的状态了。");
+        notifyUser("该记录你的状态了。");
     }, MONITOR_INTERVAL_MS);
 
     document.getElementById("monitorStatus").innerText =
@@ -222,8 +217,3 @@ function stopMonitoring() {
     document.getElementById("monitorStatus").innerText =
         "当前监控状态：未开启";
 }
-function playDing() {
-    const audio = new Audio("audio/ding.wav");
-    audio.play();
-}
-
