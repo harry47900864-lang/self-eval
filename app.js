@@ -1,239 +1,224 @@
-// ========== 配置：监控间隔（毫秒） ==========
-// 正式使用：60 * 60 * 1000 = 一小时
-// 调试用可以改成 10 * 1000（10 秒）测试
-const MONITOR_INTERVAL_MS =10 * 1000;
+// ===============================
+// 自我评估系统主脚本 app.js
+// ===============================
 
+// -----------------------
+// 一些基础配置
+// -----------------------
+const MONITOR_INTERVAL_MS = 10 * 1000; // 每小时提醒，可改短测试
+let monitorTimer = null;
 
-// ========== 本地存储 ==========
+// -----------------------
+// 页面加载初始化
+// -----------------------
+window.onload = function () {
+    loadHistory();
+    requestNotificationPermission();
 
-function loadRecords() {
-    const data = localStorage.getItem("self_eval_records");
-    return data ? JSON.parse(data) : [];
+    document.getElementById("saveBtn").onclick = saveRecord;
+    document.getElementById("feedbackBtn").onclick = generateFeedback;
+    document.getElementById("startMonitorBtn").onclick = startMonitoring;
+    document.getElementById("stopMonitorBtn").onclick = stopMonitoring;
+};
+
+// -----------------------
+// 通知权限请求
+// -----------------------
+function requestNotificationPermission() {
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
 }
 
-function saveRecords(records) {
-    localStorage.setItem("self_eval_records", JSON.stringify(records));
-}
+// -----------------------
+// 通知 + 震动提醒
+// -----------------------
+function notifyUser(message) {
 
+    // 系统通知
+    if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("自我评估提醒", {
+            body: message,
+            icon: "icons/icon-192.png"
+        });
 
-// ========== 反馈系统（与 Python 版对应） ==========
-
-function generateFeedback(records) {
-    if (records.length === 0) {
-        return "目前没有任何记录，可以先写一条，让我更了解你。";
-    }
-
-    const last = records[records.length - 1];
-    const mood = last.mood;
-    const doing = (last.doing || "").trim();
-    const valuable = (last.valuable || "").trim();
-
-    let fb = [];
-
-    // ===== 1. 情绪反馈 =====
-    if (mood === "focus") {
-        fb.push("你现在状态不错，可以趁机保持节奏。如果愿意，可以给自己设一个小目标继续推进。");
-    }
-    else if (mood === "calm") {
-        fb.push("你现在情绪平稳，很适合做一些需要耐心的工作，可以尝试进入一个轻量专注阶段。");
-    }
-    else if (mood === "anxious") {
-        fb.push("你现在有些紧张，可以做几次深呼吸，喝点水，或整理一下桌面，会让你舒服不少。");
-        fb.push("如果焦虑持续，可以试着听一点轻音乐，让心情柔和下来。");
-    }
-    else if (mood === "stress") {
-        fb.push("你似乎承受了一些压力，可以轻轻活动肩颈，站起来走几步，让身体缓一缓。");
-        fb.push("闭上眼睛几秒钟，也会帮助大脑恢复镇定。");
-    }
-    else if (mood === "out_of_control") {
-        fb.push("你现在有点失控或过度兴奋，可能一下子有了很多冲动或想法。先让自己慢下来一点会更好。");
-        fb.push("可以深呼吸三次、喝一口水，让身体稳定下来。");
-        fb.push("如果脑子很乱，可以写下此刻最重要的一件事，把注意力放在一个方向上。");
-        fb.push("这种状态不适合频繁切换任务，轻轻推进一小步就足够了。");
-    }
-    else {
-        fb.push("暂时无法判断当前情绪，但你可以先观察一下自己的状态。");
-    }
-
-    // ===== 2. 行为反馈 =====
-    const lowValueKeywords = ["刷", "摸鱼", "发呆", "短视频", "游戏"];
-    const isLowValue =
-        lowValueKeywords.some(k => doing.includes(k)) ||
-        ["不是", "不算", "一般"].some(k => valuable.includes(k));
-
-    if (doing) {
-        fb.push(`你现在做的是：『${doing}』。`);
-    } else {
-        fb.push("你没有写正在做什么，如果记录下来，会更帮助你反思状态。");
-    }
-
-    if (valuable) {
-        fb.push(`你的评价是：『${valuable}』。`);
-    }
-
-    if (isLowValue) {
-        fb.push("如果愿意，你可以想想：现在有没有更值得推进的事情？可以从最简单的一小步开始。");
-    } else {
-        fb.push("你正在做的事情看起来挺重要，可以保持一个短短的小专注段，让节奏稳定下来。");
-    }
-
-    // ===== 3. 最近 3 条趋势 =====
-    if (records.length >= 3) {
-        const recent = records.slice(-3);
-
-        let not_val_count = 0;
-        for (let r of recent) {
-            let d = r.doing || "";
-            let v = r.valuable || "";
-            if (
-                lowValueKeywords.some(k => d.includes(k)) ||
-                ["不是", "不算", "一般"].some(k => v.includes(k))
-            ) {
-                not_val_count++;
-            }
+        // 震动
+        if (navigator.vibrate) {
+            navigator.vibrate([200, 100, 200]); // 双震动
         }
-
-        if (not_val_count >= 2) {
-            fb.push("最近几次记录中，你似乎有点偏离目标，可以从一个轻松的小起点重新开始，例如整理桌面或写下下一件要做的事。");
-        }
+        return;
     }
 
-    return fb.join("\n\n");
-}
+    // alert 作为兜底
+    alert(message);
 
-
-// ========== 更新历史表 ==========
-
-function updateHistoryTable() {
-    const table = document.querySelector("#historyTable tbody");
-    table.innerHTML = "";
-
-    const records = loadRecords().reverse();
-
-    records.forEach(record => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${record.time}</td>
-            <td>${translateMoodToCN(record.mood)}</td>
-            <td>${record.doing}</td>
-            <td>${record.valuable}</td>
-        `;
-        table.appendChild(tr);
-    });
-}
-
-function translateMoodToCN(mood) {
-    switch (mood) {
-        case "focus": return "专注";
-        case "calm": return "平静";
-        case "anxious": return "焦虑";
-        case "stress": return "压力";
-        case "out_of_control": return "失控";
-        default: return mood;
+    if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
     }
 }
 
-
-// ========== 保存按钮事件 ==========
-
-document.getElementById("saveBtn").onclick = () => {
+// -----------------------
+// 保存记录
+// -----------------------
+function saveRecord() {
     const mood = document.getElementById("mood").value;
     const doing = document.getElementById("doing").value.trim();
     const valuable = document.getElementById("valuable").value.trim();
 
+    if (!doing || !valuable) {
+        alert("请填写完整信息再保存。");
+        return;
+    }
+
+    const now = new Date();
+    const timestamp = now.toLocaleString("zh-CN");
+
     const record = {
-        time: new Date().toLocaleString(),
+        timestamp,
         mood,
         doing,
         valuable
     };
 
-    const records = loadRecords();
-    records.push(record);
-    saveRecords(records);
+    // 存储到 localStorage
+    let history = JSON.parse(localStorage.getItem("evalHistory") || "[]");
+    history.push(record);
+    localStorage.setItem("evalHistory", JSON.stringify(history));
 
-    alert("记录已保存！");
-    updateHistoryTable();
-};
-
-
-// ========== 反馈按钮事件 ==========
-
-document.getElementById("feedbackBtn").onclick = () => {
-    const records = loadRecords();
-    const feedback = generateFeedback(records);
-    document.getElementById("feedbackText").innerText = feedback;
-};
-
-
-// ========== 监控与每小时提醒 ==========
-
-let monitorTimerId = null;
-
-function updateMonitorStatus(text) {
-    const el = document.getElementById("monitorStatus");
-    if (el) el.innerText = "当前监控状态：" + text;
+    loadHistory();
+    notifyUser("记录已保存。继续坚持，Maolin。");
 }
 
-// 显示提醒
-function showReminder() {
-    const message = "又过了一小时，可以记录一下你现在的状态：情绪、在做什么、是不是最有价值的事。";
+// -----------------------
+// 加载历史记录
+// -----------------------
+function loadHistory() {
+    const tableBody = document.querySelector("#historyTable tbody");
+    tableBody.innerHTML = "";
 
-    // 如果支持通知且已授权
-    if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("自我评估提醒", {
-            body: message,
-        });
-    } else {
-        // 退而求其次用 alert
-        alert(message);
+    let history = JSON.parse(localStorage.getItem("evalHistory") || "[]");
+
+    // 倒序显示
+    history.reverse().forEach(record => {
+        const row = document.createElement("tr");
+
+        // 情绪颜色
+        const color = moodColor(record.mood);
+
+        row.innerHTML = `
+            <td>${record.timestamp}</td>
+            <td style="font-weight:bold;color:${color};">${translateMood(record.mood)}</td>
+            <td>${record.doing}</td>
+            <td>${record.valuable}</td>
+        `;
+
+        tableBody.appendChild(row);
+    });
+}
+
+// -----------------------
+// 情绪颜色
+// -----------------------
+function moodColor(mood) {
+    switch (mood) {
+        case "focus": return "#22c55e";   // 绿色
+        case "calm": return "#3b82f6";    // 蓝色
+        case "anxious": return "#fbbf24"; // 黄色
+        case "stress": return "#ef4444";  // 红色
+        case "out_of_control": return "#8b5cf6"; // 紫色
     }
+    return "#000";
 }
 
-// 开始监控
-async function startMonitoring() {
-    if (monitorTimerId !== null) {
-        alert("监控已经在运行中。");
+// -----------------------
+// 情绪中文名
+// -----------------------
+function translateMood(mood) {
+    switch (mood) {
+        case "focus": return "专注";
+        case "calm": return "平静";
+        case "anvious": return "焦虑";
+        case "stress": return "压力";
+        case "out_of_control": return "失控";
+    }
+    return mood;
+}
+
+// -----------------------
+// 生成反馈（狠一点）
+// -----------------------
+function generateFeedback() {
+    let history = JSON.parse(localStorage.getItem("evalHistory") || "[]");
+    if (history.length === 0) {
+        alert("没有记录，无法生成反馈。");
         return;
     }
 
-    // 尝试申请通知权限
-    if ("Notification" in window) {
-        if (Notification.permission === "default") {
-            try {
-                await Notification.requestPermission();
-            } catch (e) {
-                console.log("通知权限申请失败：", e);
-            }
-        }
+    const last = history[history.length - 1];
+    let mood = last.mood;
+    let doing = last.doing;
+    let valuable = last.valuable;
+
+    let feedback = "【系统反馈】\n";
+
+    switch (mood) {
+        case "focus":
+            feedback += "你现在状态不错，保持住这个势头，不要松劲。\n";
+            break;
+
+        case "calm":
+            feedback += "你的状态稳定，但要小心进入低效舒适区。保持一点紧迫感。\n";
+            break;
+
+        case "anxious":
+            feedback += "你现在明显焦虑。深呼吸十秒，喝点水，稍微走动一下。别让情绪压着你。\n";
+            break;
+
+        case "stress":
+            feedback += "你现在压力过大，状态已经影响效率。去散步 5 分钟，或者闭上眼睛缓一缓。\n";
+            break;
+
+        case "out_of_control":
+            feedback += "⚠ 你现在处于【失控】状态。\n";
+            feedback += "停下你正在做的事情，马上洗把脸，听几分钟轻音乐，让自己冷静下来。\n你现在的方向完全偏了，必须立即调整。\n";
+            break;
     }
 
-    monitorTimerId = setInterval(() => {
-        showReminder();
+    if (valuable === "不是" || valuable === "否" || valuable === "不算" || valuable === "一般") {
+        feedback += "\n顺便提醒你：你现在做的事情并不是最有价值的。\n";
+        feedback += "你必须立刻问自己：我现在应该做的最重要的事是什么？然后马上去做。\n";
+    }
+
+    document.getElementById("feedbackText").innerText = feedback;
+}
+
+// -----------------------
+// 开始监控
+// -----------------------
+function startMonitoring() {
+    if (monitorTimer) {
+        notifyUser("监控已经在运行中。");
+        return;
+    }
+
+    monitorTimer = setInterval(() => {
+        notifyUser("时间到了，该记录你的状态了。");
     }, MONITOR_INTERVAL_MS);
 
-    updateMonitorStatus("已开启（每小时提醒）");
-    alert("监控已开启：只要页面或 PWA 保持打开状态，每小时会提醒你一次。");
+    document.getElementById("monitorStatus").innerText =
+        "当前监控状态：已开启";
 }
 
+// -----------------------
 // 停止监控
+// -----------------------
 function stopMonitoring() {
-    if (monitorTimerId === null) {
-        alert("监控尚未开启。");
-        return;
+    if (monitorTimer) {
+        clearInterval(monitorTimer);
+        monitorTimer = null;
+        notifyUser("监控已关闭。");
     }
 
-    clearInterval(monitorTimerId);
-    monitorTimerId = null;
-    updateMonitorStatus("未开启");
-    alert("监控已停止，不会再每小时提醒。");
+    document.getElementById("monitorStatus").innerText =
+        "当前监控状态：未开启";
 }
-
-// 绑定按钮事件
-document.getElementById("startMonitorBtn").onclick = startMonitoring;
-document.getElementById("stopMonitorBtn").onclick = stopMonitoring;
-
-
-// ========== 初始化 ==========
-
-updateHistoryTable();
