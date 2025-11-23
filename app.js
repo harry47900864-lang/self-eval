@@ -3,6 +3,7 @@
 // ===============================
 
 // 监控间隔（1 小时）
+// 提醒现在由系统计时器负责，不再依靠 JS 定时器
 const MONITOR_INTERVAL_MS = 10 * 1000;
 let monitorTimer = null;
 
@@ -27,9 +28,7 @@ window.onload = function () {
 // -----------------------
 function userInteractionInitAudio(fn) {
     return function () {
-        if (!audioUnlocked) {
-            initAudio();
-        }
+        if (!audioUnlocked) initAudio();
         fn();
     }
 }
@@ -66,19 +65,15 @@ function playDing() {
 // 通知 + 音效提醒
 // -----------------------
 function notifyUser(message) {
-
-    // 系统通知
     if ("Notification" in window && Notification.permission === "granted") {
         new Notification("自我评估提醒", {
             body: message,
             icon: "icons/icon-192.png"
         });
-
         playDing();
         return;
     }
 
-    // alert 作为兜底
     alert(message);
     playDing();
 }
@@ -116,10 +111,8 @@ function loadHistory() {
     tableBody.innerHTML = "";
 
     let history = JSON.parse(localStorage.getItem("evalHistory") || "[]");
-
     history.reverse().forEach(record => {
         const row = document.createElement("tr");
-
         const color = moodColor(record.mood);
 
         row.innerHTML = `
@@ -188,10 +181,10 @@ function generateFeedback() {
             feedback += "你焦虑了。深呼吸十秒，喝点水，走两步。\n";
             break;
         case "stress":
-            feedback += "压力已经溢出来了，去放松 3 分钟再回来。\n";
+            feedback += "你的压力已经明显上来了，放松三分钟再继续。\n";
             break;
         case "out_of_control":
-            feedback += "⚠ 你处于【失控】状态。\n停下手头的一切，洗把脸，听轻音乐冷静 3 分钟。\n";
+            feedback += "⚠ 你处于【失控】状态。\n停止一切动作，洗把脸冷静一下。\n";
             break;
     }
 
@@ -203,28 +196,24 @@ function generateFeedback() {
 }
 
 // -----------------------
-// 开始监控
+// 开始监控（系统计时器方案）
 // -----------------------
 function startMonitoring() {
-    if (monitorTimer) {
-        notifyUser("监控已经在运行中。");
-        return;
-    }
+    notifyUser("即将跳转到系统计时器，请点击“开始计时”。");
 
-    monitorTimer = setInterval(() => {
-        notifyUser("该记录你的状态了。");
-    }, MONITOR_INTERVAL_MS);
+    // 🚀 核心：调用华为系统计时器（1 小时倒计时）
+    window.location.href = "hwclock://addtimer?minute=60&repeat=1";
 
-    document.getElementById("monitorStatus").innerText = "当前监控状态：已开启";
+    document.getElementById("monitorStatus").innerText =
+        "当前监控状态：已交由系统计时器处理";
 }
 
 // -----------------------
+// 停止监控（网页端不再负责）
+// -----------------------
 function stopMonitoring() {
-    if (monitorTimer) {
-        clearInterval(monitorTimer);
-        monitorTimer = null;
-        notifyUser("监控已关闭。");
-    }
+    notifyUser("监控已关闭（系统计时器仍需你手动停止）。");
 
-    document.getElementById("monitorStatus").innerText = "当前监控状态：未开启";
+    document.getElementById("monitorStatus").innerText =
+        "当前监控状态：未开启";
 }
