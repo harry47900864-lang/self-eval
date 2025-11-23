@@ -3,8 +3,11 @@
 // ===============================
 
 // 监控间隔（1 小时）
-const MONITOR_INTERVAL_MS = 60 * 60 * 1000;
+const MONITOR_INTERVAL_MS = 10 * 1000;
 let monitorTimer = null;
+
+// 音频是否解锁（华为手机必须用户交互）
+let audioUnlocked = false;
 
 // -----------------------
 // 初始化
@@ -13,11 +16,33 @@ window.onload = function () {
     loadHistory();
     requestNotificationPermission();
 
-    document.getElementById("saveBtn").onclick = saveRecord;
-    document.getElementById("feedbackBtn").onclick = generateFeedback;
-    document.getElementById("startMonitorBtn").onclick = startMonitoring;
+    document.getElementById("saveBtn").onclick = userInteractionInitAudio(saveRecord);
+    document.getElementById("feedbackBtn").onclick = userInteractionInitAudio(generateFeedback);
+    document.getElementById("startMonitorBtn").onclick = userInteractionInitAudio(startMonitoring);
     document.getElementById("stopMonitorBtn").onclick = stopMonitoring;
 };
+
+// -----------------------
+// 用户点击任意按钮时自动解锁音频
+// -----------------------
+function userInteractionInitAudio(fn) {
+    return function () {
+        if (!audioUnlocked) {
+            initAudio();
+        }
+        fn();
+    }
+}
+
+function initAudio() {
+    const testAudio = new Audio("audio/ding.wav");
+    testAudio.play().then(() => {
+        audioUnlocked = true;
+        console.log("音效已解锁");
+    }).catch(() => {
+        console.log("音效解锁失败，用户需要继续点击任意按钮");
+    });
+}
 
 // -----------------------
 // 请求通知权限
@@ -32,6 +57,7 @@ function requestNotificationPermission() {
 // 播放叮声
 // -----------------------
 function playDing() {
+    if (!audioUnlocked) return;
     const audio = new Audio("audio/ding.wav");
     audio.play();
 }
@@ -48,7 +74,7 @@ function notifyUser(message) {
             icon: "icons/icon-192.png"
         });
 
-        playDing(); // 播放提示音
+        playDing();
         return;
     }
 
@@ -70,22 +96,16 @@ function saveRecord() {
         return;
     }
 
-    const now = new Date();
-    const timestamp = now.toLocaleString("zh-CN");
+    const timestamp = new Date().toLocaleString("zh-CN");
 
-    const record = {
-        timestamp,
-        mood,
-        doing,
-        valuable
-    };
+    const record = { timestamp, mood, doing, valuable };
 
     let history = JSON.parse(localStorage.getItem("evalHistory") || "[]");
     history.push(record);
     localStorage.setItem("evalHistory", JSON.stringify(history));
 
     loadHistory();
-    notifyUser("记录已保存。继续坚持，Maolin。");
+    notifyUser("记录已保存。继续坚持。");
 }
 
 // -----------------------
@@ -118,11 +138,11 @@ function loadHistory() {
 // -----------------------
 function moodColor(mood) {
     switch (mood) {
-        case "focus": return "#22c55e";   // 绿色
-        case "calm": return "#3b82f6";    // 蓝色
-        case "anxious": return "#fbbf24"; // 黄色
-        case "stress": return "#ef4444";  // 红色
-        case "out_of_control": return "#8b5cf6"; // 紫色
+        case "focus": return "#22c55e";
+        case "calm": return "#3b82f6";
+        case "anxious": return "#fbbf24";
+        case "stress": return "#ef4444";
+        case "out_of_control": return "#8b5cf6";
     }
     return "#000";
 }
@@ -142,7 +162,7 @@ function translateMood(mood) {
 }
 
 // -----------------------
-// 生成反馈（狠一点）
+// 生成反馈
 // -----------------------
 function generateFeedback() {
     let history = JSON.parse(localStorage.getItem("evalHistory") || "[]");
@@ -159,29 +179,24 @@ function generateFeedback() {
 
     switch (mood) {
         case "focus":
-            feedback += "你现在状态不错，保持住这个势头，不要松懈。\n";
+            feedback += "你现在状态不错，保持住别松劲。\n";
             break;
-
         case "calm":
-            feedback += "你现在很平静，但不要陷入舒适区。保持一点推进力。\n";
+            feedback += "你现在平静，但别陷入低效舒适区。\n";
             break;
-
         case "anxious":
-            feedback += "你现在焦虑得有点明显。深呼吸十秒，喝点水，站起来走两步。\n";
+            feedback += "你焦虑了。深呼吸十秒，喝点水，走两步。\n";
             break;
-
         case "stress":
-            feedback += "你的压力已经影响到状态了。离开屏幕几分钟，做点放松动作。\n";
+            feedback += "压力已经溢出来了，去放松 3 分钟再回来。\n";
             break;
-
         case "out_of_control":
-            feedback += "⚠ 你处于【失控】状态。\n";
-            feedback += "立刻停下来，去洗把脸、听轻音乐，强制冷静 3 分钟。\n";
+            feedback += "⚠ 你处于【失控】状态。\n停下手头的一切，洗把脸，听轻音乐冷静 3 分钟。\n";
             break;
     }
 
-    if (valuable === "不是" || valuable === "否" || valuable === "不算" || valuable === "一般") {
-        feedback += "\n你现在做的事情不是最有价值的。\n马上提醒自己：我现在应该做的最重要的事是什么？然后去做。\n";
+    if (["不是", "否", "不算", "一般"].includes(valuable)) {
+        feedback += "\n你现在做的事不是最有价值的。\n马上问自己：最重要的事是什么？去做。\n";
     }
 
     document.getElementById("feedbackText").innerText = feedback;
@@ -200,12 +215,9 @@ function startMonitoring() {
         notifyUser("该记录你的状态了。");
     }, MONITOR_INTERVAL_MS);
 
-    document.getElementById("monitorStatus").innerText =
-        "当前监控状态：已开启";
+    document.getElementById("monitorStatus").innerText = "当前监控状态：已开启";
 }
 
-// -----------------------
-// 停止监控
 // -----------------------
 function stopMonitoring() {
     if (monitorTimer) {
@@ -214,6 +226,5 @@ function stopMonitoring() {
         notifyUser("监控已关闭。");
     }
 
-    document.getElementById("monitorStatus").innerText =
-        "当前监控状态：未开启";
+    document.getElementById("monitorStatus").innerText = "当前监控状态：未开启";
 }
