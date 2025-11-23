@@ -1,3 +1,9 @@
+// ========== 配置：监控间隔（毫秒） ==========
+// 正式使用：60 * 60 * 1000 = 一小时
+// 调试用可以改成 10 * 1000（10 秒）测试
+const MONITOR_INTERVAL_MS =10 * 1000;
+
+
 // ========== 本地存储 ==========
 
 function loadRecords() {
@@ -9,7 +15,8 @@ function saveRecords(records) {
     localStorage.setItem("self_eval_records", JSON.stringify(records));
 }
 
-// ========== 反馈系统核心逻辑（等价 Python 版） ==========
+
+// ========== 反馈系统（与 Python 版对应） ==========
 
 function generateFeedback(records) {
     if (records.length === 0) {
@@ -23,9 +30,9 @@ function generateFeedback(records) {
 
     let fb = [];
 
-    // ===== 情绪反馈 =====
+    // ===== 1. 情绪反馈 =====
     if (mood === "focus") {
-        fb.push("你现在状态不错，可以趁机保持节奏。如果愿意，可以给自己设一个小任务继续推进。");
+        fb.push("你现在状态不错，可以趁机保持节奏。如果愿意，可以给自己设一个小目标继续推进。");
     }
     else if (mood === "calm") {
         fb.push("你现在情绪平稳，很适合做一些需要耐心的工作，可以尝试进入一个轻量专注阶段。");
@@ -48,7 +55,7 @@ function generateFeedback(records) {
         fb.push("暂时无法判断当前情绪，但你可以先观察一下自己的状态。");
     }
 
-    // ===== 行为反馈 =====
+    // ===== 2. 行为反馈 =====
     const lowValueKeywords = ["刷", "摸鱼", "发呆", "短视频", "游戏"];
     const isLowValue =
         lowValueKeywords.some(k => doing.includes(k)) ||
@@ -70,7 +77,7 @@ function generateFeedback(records) {
         fb.push("你正在做的事情看起来挺重要，可以保持一个短短的小专注段，让节奏稳定下来。");
     }
 
-    // ===== 最近 3 条趋势 =====
+    // ===== 3. 最近 3 条趋势 =====
     if (records.length >= 3) {
         const recent = records.slice(-3);
 
@@ -94,6 +101,7 @@ function generateFeedback(records) {
     return fb.join("\n\n");
 }
 
+
 // ========== 更新历史表 ==========
 
 function updateHistoryTable() {
@@ -106,7 +114,7 @@ function updateHistoryTable() {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${record.time}</td>
-            <td>${record.mood}</td>
+            <td>${translateMoodToCN(record.mood)}</td>
             <td>${record.doing}</td>
             <td>${record.valuable}</td>
         `;
@@ -114,7 +122,19 @@ function updateHistoryTable() {
     });
 }
 
-// ========== 保存按钮 ==========
+function translateMoodToCN(mood) {
+    switch (mood) {
+        case "focus": return "专注";
+        case "calm": return "平静";
+        case "anxious": return "焦虑";
+        case "stress": return "压力";
+        case "out_of_control": return "失控";
+        default: return mood;
+    }
+}
+
+
+// ========== 保存按钮事件 ==========
 
 document.getElementById("saveBtn").onclick = () => {
     const mood = document.getElementById("mood").value;
@@ -136,14 +156,84 @@ document.getElementById("saveBtn").onclick = () => {
     updateHistoryTable();
 };
 
-// ========== 反馈按钮 ==========
+
+// ========== 反馈按钮事件 ==========
 
 document.getElementById("feedbackBtn").onclick = () => {
     const records = loadRecords();
     const feedback = generateFeedback(records);
-
     document.getElementById("feedbackText").innerText = feedback;
 };
 
-// 初始化历史数据
+
+// ========== 监控与每小时提醒 ==========
+
+let monitorTimerId = null;
+
+function updateMonitorStatus(text) {
+    const el = document.getElementById("monitorStatus");
+    if (el) el.innerText = "当前监控状态：" + text;
+}
+
+// 显示提醒
+function showReminder() {
+    const message = "又过了一小时，可以记录一下你现在的状态：情绪、在做什么、是不是最有价值的事。";
+
+    // 如果支持通知且已授权
+    if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("自我评估提醒", {
+            body: message,
+        });
+    } else {
+        // 退而求其次用 alert
+        alert(message);
+    }
+}
+
+// 开始监控
+async function startMonitoring() {
+    if (monitorTimerId !== null) {
+        alert("监控已经在运行中。");
+        return;
+    }
+
+    // 尝试申请通知权限
+    if ("Notification" in window) {
+        if (Notification.permission === "default") {
+            try {
+                await Notification.requestPermission();
+            } catch (e) {
+                console.log("通知权限申请失败：", e);
+            }
+        }
+    }
+
+    monitorTimerId = setInterval(() => {
+        showReminder();
+    }, MONITOR_INTERVAL_MS);
+
+    updateMonitorStatus("已开启（每小时提醒）");
+    alert("监控已开启：只要页面或 PWA 保持打开状态，每小时会提醒你一次。");
+}
+
+// 停止监控
+function stopMonitoring() {
+    if (monitorTimerId === null) {
+        alert("监控尚未开启。");
+        return;
+    }
+
+    clearInterval(monitorTimerId);
+    monitorTimerId = null;
+    updateMonitorStatus("未开启");
+    alert("监控已停止，不会再每小时提醒。");
+}
+
+// 绑定按钮事件
+document.getElementById("startMonitorBtn").onclick = startMonitoring;
+document.getElementById("stopMonitorBtn").onclick = stopMonitoring;
+
+
+// ========== 初始化 ==========
+
 updateHistoryTable();
