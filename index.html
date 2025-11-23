@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自我评估系统（Web版）</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- PWA manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- 必要 PWA 支持 -->
+    <script>
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("service-worker.js");
+        }
+    </script>
+
+</head>
+<body>
+
+    <h1>自我评估系统（Web 版 初始模板）</h1>
+
+    <div class="card">
+        <h2>记录你的状态</h2>
+
+        <label>情绪：</label>
+        <select id="mood">
+            <option value="focus">专注</option>
+            <option value="calm">平静</option>
+            <option value="anxious">焦虑</option>
+            <option value="stress">压力</option>
+            <option value="out_of_control">失控</option>
+        </select>
+
+        <label>你现在在做什么？</label>
+        <input id="doing" type="text" placeholder="例如：学习、发呆、摸鱼……">
+
+        <label>这是你当前最有价值的事吗？</label>
+        <input id="valuable" type="text" placeholder="例如：是 / 不是 / 一般">
+
+        <button id="saveBtn">保存记录</button>
+    </div>
+
+
+
+    <div class="card">
+        <h2>历史记录</h2>
+        <table id="historyTable">
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>情绪</th>
+                    <th>行为</th>
+                    <th>是否最有价值</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
