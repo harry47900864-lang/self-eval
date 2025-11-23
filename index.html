@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>自我评估系统（Web版）</title>
 
+    <!-- 样式 -->
     <link rel="stylesheet" href="style.css">
+
+    <!-- PWA manifest -->
     <link rel="manifest" href="manifest.json">
 
+    <!-- Service Worker 注册 -->
     <script>
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.register("service-worker.js");
@@ -19,7 +23,7 @@
 
     <h1>自我评估系统（Web 版）</h1>
 
-    <!-- 主卡片 -->
+    <!-- 记录卡片 -->
     <div class="card">
         <h2>记录你的状态</h2>
 
@@ -44,7 +48,7 @@
         <hr style="margin:18px 0;">
 
         <h3>监控与提醒</h3>
-        <button id="startMonitorBtn" style="background:#2563eb;">开始监控（每小时提醒）</button>
+        <button id="startMonitorBtn" style="background:#2563eb;">开始监控（交给系统日历）</button>
         <button id="stopMonitorBtn" style="background:#6b7280;">停止监控</button>
 
         <p id="monitorStatus" style="margin-top:8px;color:#374151;">
@@ -53,13 +57,14 @@
 
         <hr style="margin:18px 0;">
 
+        <!-- 安装为 PWA 应用 -->
         <button id="installBtn"
             style="width:100%;padding:12px;background:#10b981;color:white;border:none;border-radius:6px;margin-top:16px;display:none;">
             安装为应用（APP）
         </button>
     </div>
 
-    <!-- 系统反馈显示区 -->
+    <!-- 系统反馈 -->
     <div class="card">
         <h2>系统反馈</h2>
         <div id="feedbackText" style="white-space:pre-line; font-size:16px;"></div>
@@ -81,7 +86,7 @@
         </table>
     </div>
 
-    <!-- 安装 PWA 脚本 -->
+    <!-- PWA 安装脚本 -->
     <script>
         let deferredPrompt = null;
 
@@ -99,6 +104,7 @@
         };
     </script>
 
+    <!-- 主逻辑 -->
     <script src="app.js"></script>
 </body>
 </html>
