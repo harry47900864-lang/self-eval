@@ -1,17 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>自我评估系统（Web版）</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>自我评估系统（Web 版）</title>
 
-    <!-- 样式 -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="manifest.json" />
 
-    <!-- PWA manifest -->
-    <link rel="manifest" href="manifest.json">
-
-    <!-- Service Worker 注册 -->
     <script>
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.register("service-worker.js");
@@ -21,9 +17,8 @@
 
 <body>
 
-    <h1>自我评估系统（Web 版）</h1>
+    <h1>自我评估系统（Web版）</h1>
 
-    <!-- 记录卡片 -->
     <div class="card">
         <h2>记录你的状态</h2>
 
@@ -36,41 +31,40 @@
             <option value="out_of_control">失控</option>
         </select>
 
+        <label>情绪强度（0–10）</label>
+        <input id="moodLevel" type="number" min="0" max="10" placeholder="0~10">
+
         <label>你现在在做什么？</label>
-        <input id="doing" type="text" placeholder="例如：学习、发呆、摸鱼……">
+        <input id="doing" type="text" placeholder="例如：学习、发呆……">
+
+        <label>专注程度（0–10）</label>
+        <input id="focusLevel" type="number" min="0" max="10" placeholder="0~10">
+
+        <label>掌控度（0–10）</label>
+        <input id="controlLevel" type="number" min="0" max="10" placeholder="0~10">
 
         <label>这是你当前最有价值的事吗？</label>
-        <input id="valuable" type="text" placeholder="例如：是 / 不是 / 一般">
+        <input id="valuable" type="text" placeholder="是 / 不是 / 一般">
 
         <button id="saveBtn">保存记录</button>
         <button id="feedbackBtn" style="background:#16a34a;">生成反馈</button>
 
-        <hr style="margin:18px 0;">
+        <hr />
 
         <h3>监控与提醒</h3>
-        <button id="startMonitorBtn" style="background:#2563eb;">开始监控（交给系统日历）</button>
+        <button id="startMonitorBtn" style="background:#2563eb;">开始监控（系统日历）</button>
         <button id="stopMonitorBtn" style="background:#6b7280;">停止监控</button>
 
         <p id="monitorStatus" style="margin-top:8px;color:#374151;">
             当前监控状态：未开启
         </p>
-
-        <hr style="margin:18px 0;">
-
-        <!-- 安装为 PWA 应用 -->
-        <button id="installBtn"
-            style="width:100%;padding:12px;background:#10b981;color:white;border:none;border-radius:6px;margin-top:16px;display:none;">
-            安装为应用（APP）
-        </button>
     </div>
 
-    <!-- 系统反馈 -->
     <div class="card">
         <h2>系统反馈</h2>
-        <div id="feedbackText" style="white-space:pre-line; font-size:16px;"></div>
+        <div id="feedbackText" style="white-space:pre-line"></div>
     </div>
 
-    <!-- 历史记录 -->
     <div class="card">
         <h2>历史记录</h2>
         <table id="historyTable">
@@ -78,7 +72,10 @@
                 <tr>
                     <th>时间</th>
                     <th>情绪</th>
+                    <th>强度</th>
                     <th>行为</th>
+                    <th>专注</th>
+                    <th>掌控</th>
                     <th>是否最有价值</th>
                 </tr>
             </thead>
@@ -86,25 +83,6 @@
         </table>
     </div>
 
-    <!-- PWA 安装脚本 -->
-    <script>
-        let deferredPrompt = null;
-
-        window.addEventListener("beforeinstallprompt", (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            document.getElementById("installBtn").style.display = "block";
-        });
-
-        document.getElementById("installBtn").onclick = async () => {
-            if (!deferredPrompt) return;
-            deferredPrompt.prompt();
-            deferredPrompt = null;
-            document.getElementById("installBtn").style.display = "none";
-        };
-    </script>
-
-    <!-- 主逻辑 -->
     <script src="app.js"></script>
 </body>
 </html>
