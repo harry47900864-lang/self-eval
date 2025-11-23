@@ -3,7 +3,7 @@
 // ===============================
 
 // 监控间隔（1 小时）——现在真正的提醒交给系统日历，这里只是状态显示
-const MONITOR_INTERVAL_MS = 10 * 1000;
+const MONITOR_INTERVAL_MS = 60 * 60 * 1000;
 let monitorTimer = null;
 
 // 音频是否解锁（PC端可用，华为手机可能被限制）
