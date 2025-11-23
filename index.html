@@ -10,7 +10,7 @@
     <!-- PWA manifest -->
     <link rel="manifest" href="manifest.json">
 
-    <!-- 必要 PWA 支持 -->
+    <!-- 注册 Service Worker -->
     <script>
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.register("service-worker.js");
@@ -20,8 +20,9 @@
 </head>
 <body>
 
-    <h1>自我评估系统（Web 版 初始模板）</h1>
+    <h1>自我评估系统（Web 版）</h1>
 
+    <!-- 记录表单 -->
     <div class="card">
         <h2>记录你的状态</h2>
 
@@ -41,10 +42,16 @@
         <input id="valuable" type="text" placeholder="例如：是 / 不是 / 一般">
 
         <button id="saveBtn">保存记录</button>
+        <button id="feedbackBtn" style="background:#16a34a;">生成反馈</button>
     </div>
 
+    <!-- 反馈内容 -->
+    <div class="card">
+        <h2>系统反馈</h2>
+        <div id="feedbackText" style="white-space:pre-line; font-size:16px;"></div>
+    </div>
 
-
+    <!-- 历史记录 -->
     <div class="card">
         <h2>历史记录</h2>
         <table id="historyTable">
