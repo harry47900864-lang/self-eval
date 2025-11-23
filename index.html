@@ -5,27 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>自我评估系统（Web版）</title>
 
-    <!-- 引入 CSS -->
     <link rel="stylesheet" href="style.css">
-
-    <!-- PWA manifest -->
     <link rel="manifest" href="manifest.json">
 
-    <!-- 注册 Service Worker -->
     <script>
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.register("service-worker.js");
         }
     </script>
-
 </head>
+
 <body>
 
     <h1>自我评估系统（Web 版）</h1>
 
-    <!-- ============================
-         记录表单
-    ============================= -->
+    <!-- 主卡片 -->
     <div class="card">
         <h2>记录你的状态</h2>
 
@@ -49,43 +43,29 @@
 
         <hr style="margin:18px 0;">
 
-        <!-- 监控系统 -->
         <h3>监控与提醒</h3>
         <button id="startMonitorBtn" style="background:#2563eb;">开始监控（每小时提醒）</button>
         <button id="stopMonitorBtn" style="background:#6b7280;">停止监控</button>
+
         <p id="monitorStatus" style="margin-top:8px;color:#374151;">
             当前监控状态：未开启
         </p>
 
         <hr style="margin:18px 0;">
 
-        <!-- PWA 安装按钮 -->
-        <button id="installBtn" style="
-            width:100%;
-            padding:12px;
-            background:#10b981;
-            color:white;
-            border:none;
-            border-radius:6px;
-            margin-top:16px;
-            display:none;
-        ">
+        <button id="installBtn"
+            style="width:100%;padding:12px;background:#10b981;color:white;border:none;border-radius:6px;margin-top:16px;display:none;">
             安装为应用（APP）
         </button>
-
     </div>
 
-    <!-- ============================
-         系统反馈
-    ============================= -->
+    <!-- 系统反馈显示区 -->
     <div class="card">
         <h2>系统反馈</h2>
         <div id="feedbackText" style="white-space:pre-line; font-size:16px;"></div>
     </div>
 
-    <!-- ============================
-         历史记录
-    ============================= -->
+    <!-- 历史记录 -->
     <div class="card">
         <h2>历史记录</h2>
         <table id="historyTable">
@@ -101,10 +81,7 @@
         </table>
     </div>
 
-
-    <!-- ============================
-         PWA 安装脚本
-    ============================= -->
+    <!-- 安装 PWA 脚本 -->
     <script>
         let deferredPrompt = null;
 
@@ -117,16 +94,11 @@
         document.getElementById("installBtn").onclick = async () => {
             if (!deferredPrompt) return;
             deferredPrompt.prompt();
-            const result = await deferredPrompt.userChoice;
             deferredPrompt = null;
             document.getElementById("installBtn").style.display = "none";
         };
     </script>
 
-    <!-- ============================
-         核心逻辑 JS
-    ============================= -->
     <script src="app.js"></script>
-
 </body>
 </html>
