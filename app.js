@@ -222,3 +222,8 @@ function stopMonitoring() {
     document.getElementById("monitorStatus").innerText =
         "当前监控状态：未开启";
 }
+function playDing() {
+    const audio = new Audio("audio/ding.wav");
+    audio.play();
+}
+
